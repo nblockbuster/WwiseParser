@@ -147,6 +147,11 @@ namespace WwiseParserLib.Parsers
                     {
                         switch ((HIRCObjectType)objectType)
                         {
+                            //I haven't tested this yet.
+                            //case HIRCObjectType.Sound:
+                            //    hircObject = ParseSound(objectBlob);
+                            //    break;
+                            
                             case HIRCObjectType.MusicSegment:
                                 hircObject = ParseMusicSegment2013(objectBlob);
                                 break;
@@ -207,6 +212,7 @@ namespace WwiseParserLib.Parsers
                     {
                         hircObject = (HIRCObjectType) objectType switch
                         {
+                            HIRCObjectType.Sound => ParseSound2019(objectBlob),
                             HIRCObjectType.Event => ParseEvent2019(objectBlob),
                             HIRCObjectType.EventAction => ParseEventAction(objectBlob),
                             HIRCObjectType.MusicSegment => ParseMusicSegment2019(objectBlob),
@@ -353,6 +359,35 @@ namespace WwiseParserLib.Parsers
                     sound.AudioType = (SoundType)reader.ReadByte();
                 }
                 sound.Properties = reader.ReadAudioProperties();
+
+                Debug.Assert(reader.BaseStream.Position == reader.BaseStream.Length);
+                return sound;
+            }
+        }
+        
+        public static Sound ParseSound2019(byte[] data)
+        {
+            using (var reader = new BinaryReader(new MemoryStream(data)))
+            {
+                var sound = new Sound(data.Length);
+                sound.Id = reader.ReadUInt32();
+                sound.Unknown_04 = reader.ReadByte();
+                sound.Unknown_05 = reader.ReadByte();
+                if (sound.Unknown_04 > 1)
+                {
+                    Console.WriteLine("Encountered sound object with Unknown_04 > 1. Skipping to AudioProperties.");
+                    reader.BaseStream.Seek(0x10, SeekOrigin.Current);
+                }
+                else
+                {
+                    sound.Conversion = (SoundConversionType)reader.ReadByte();
+                    sound.Unknown_07 = reader.ReadByte();
+                    sound.Source = (SoundSource)reader.ReadByte();
+                    sound.AudioId = reader.ReadUInt32();
+                    sound.AudioLength = reader.ReadUInt32();
+                    sound.AudioType = (SoundType)reader.ReadByte();
+                }
+                sound.Properties = reader.ReadAudioProperties2019();
 
                 Debug.Assert(reader.BaseStream.Position == reader.BaseStream.Length);
                 return sound;
